@@ -1,0 +1,348 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>City route simulator</title>
+<meta name="description" content="Try the find-rank-route-treat workflow for larval source management in your browser: score a habitat ranking with lift-ratio and simulate field routes on OpenStreetMap roads.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Sans+Condensed:wght@500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<style>
+:root {
+  --page: #f1f4f5; --surface: #ffffff; --ink: #12202a; --ink-2: #4a5963; --muted: #77858e; --line: #dde3e7; --line-2: #c5ced4;
+  --blue: #2a78d6; --blue-deep: #1c5cab; --wash: #eaf2fc; --warn: #8a4b00; --warn-wash: #fff4e0;
+  --sans: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --tight: "IBM Plex Sans Condensed", "IBM Plex Sans", system-ui, sans-serif;
+  --rail: 400px;
+}
+* { box-sizing: border-box; }
+html, body { height: 100%; margin: 0; }
+body { background: var(--page); color: var(--ink); font: 14px/1.45 var(--sans); }
+h1, h2, h3, p, ul, figure { margin: 0; }
+button, input, select { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
+
+.top { display: flex; align-items: baseline; gap: 20px; padding: 12px 20px; background: var(--ink); color: #fff; }
+.top h1 { font: 600 19px/1.2 var(--tight); letter-spacing: .01em; white-space: nowrap; }
+.top p { color: #b9c6cf; font-size: 13.5px; flex: 1; min-width: 0; }
+.top button { background: none; border: 1px solid #5b6b76; color: #fff; border-radius: 4px; padding: 4px 12px; cursor: pointer; white-space: nowrap; }
+.top button:hover { border-color: #fff; }
+
+.bench { display: grid; grid-template-columns: var(--rail) minmax(0, 1fr); height: calc(100% - 50px); }
+.rail { overflow-y: auto; background: var(--surface); border-right: 1px solid var(--line); padding: 6px 20px 40px; }
+.stage { overflow-y: auto; display: flex; flex-direction: column; min-width: 0; }
+
+/* The four steps are stops on one line, like visits on a route. */
+.step { position: relative; padding: 16px 0 18px 42px; }
+.step::before { content: ""; position: absolute; left: 13px; top: 0; bottom: 0; width: 2px; background: var(--line); }
+.step:first-child::before { top: 22px; }
+.step:last-child::before { bottom: auto; height: 22px; }
+.step .stop { position: absolute; left: 0; top: 14px; width: 28px; height: 28px; border-radius: 50%; background: var(--ink); color: #fff; font: 600 15px/28px var(--tight); text-align: center; }
+.step h2 { font: 600 17px/1.25 var(--tight); }
+.step h2 + p { color: var(--ink-2); margin: 1px 0 12px; }
+
+.tabs { display: flex; border: 1px solid var(--line-2); border-radius: 5px; overflow: hidden; margin-bottom: 12px; }
+.tabs button { flex: 1; border: 0; background: var(--surface); padding: 6px 8px; cursor: pointer; }
+.tabs button + button { border-left: 1px solid var(--line-2); }
+.tabs button[aria-selected="true"] { background: var(--ink); color: #fff; }
+
+.field { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 2px 10px; margin: 0 0 10px; }
+.field > span { color: var(--ink-2); }
+.field output { font-variant-numeric: tabular-nums; font-weight: 500; }
+.field input[type="range"] { grid-column: 1 / -1; width: 100%; accent-color: var(--blue); margin: 0; }
+.field select, .field input[type="number"], .field input[type="search"] { grid-column: 1 / -1; }
+select, input[type="number"], input[type="search"] { width: 100%; padding: 6px 8px; border: 1px solid var(--line-2); border-radius: 4px; background: #fff; }
+.pair { display: flex; gap: 8px; margin: 0 0 10px; }
+.pair > * { flex: 1; min-width: 0; }
+.pair > button { flex: 0 0 auto; }
+.btn { border: 1px solid var(--line-2); background: #fff; border-radius: 4px; padding: 6px 12px; cursor: pointer; }
+.btn:hover { border-color: var(--ink-2); }
+.btn.primary { background: var(--blue-deep); border-color: var(--blue-deep); color: #fff; font-weight: 500; width: 100%; padding: 8px 12px; }
+.btn.primary:hover { background: #164a8c; }
+.btn[aria-pressed="true"] { background: var(--wash); border-color: var(--blue); }
+.btn.primary[aria-pressed="true"] { background: var(--surface); border-color: var(--blue-deep); color: var(--blue-deep); }
+.btn.primary[aria-pressed="true"]:hover { background: var(--wash); }
+.btn:disabled { opacity: .5; cursor: default; }
+.note { color: var(--ink-2); font-size: 13px; margin: 8px 0 0; }
+.note code { font: 12.5px ui-monospace, Consolas, monospace; background: var(--page); padding: 0 4px; border-radius: 3px; }
+details { margin: 0 0 10px; }
+summary { cursor: pointer; color: var(--ink-2); margin-bottom: 8px; }
+#placeResults { list-style: none; padding: 0; margin: -4px 0 10px; }
+#placeResults button { display: block; width: 100%; text-align: left; border: 0; border-bottom: 1px solid var(--line); background: none; padding: 5px 2px; cursor: pointer; }
+#placeResults button:hover { background: var(--wash); }
+
+/* The lift-ratio readout is the one loud element. */
+.lift { display: flex; align-items: flex-end; gap: 12px; margin: 2px 0 6px; }
+.lift b { font: 600 52px/0.9 var(--tight); color: var(--blue-deep); font-variant-numeric: tabular-nums; }
+.lift span { color: var(--ink-2); font-size: 13px; padding-bottom: 3px; }
+.scale { position: relative; height: 6px; border-radius: 3px; background: var(--line); margin: 0 0 4px; }
+.scale i { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 3px; background: var(--blue); }
+.scale-ends { display: flex; justify-content: space-between; color: var(--muted); font-size: 12px; margin-bottom: 8px; }
+
+.checks { display: grid; gap: 4px; margin: 0 0 10px; }
+.checks label { display: flex; align-items: center; gap: 8px; cursor: pointer; }
+.checks input { accent-color: var(--ink); margin: 0; }
+.checks .group { color: var(--muted); font-size: 12.5px; margin-top: 5px; }
+.checks .group:first-child { margin-top: 0; }
+.swatch { flex: 0 0 22px; height: 0; border-top: 3px solid; }
+.summary { background: var(--wash); border-left: 3px solid var(--blue); padding: 8px 10px; margin: 0 0 12px; }
+
+#map { flex: 0 0 auto; height: 58vh; min-height: 360px; background: #dfe6ea; }
+.mapwrap { position: relative; flex: 0 0 auto; }
+.map-play { position: absolute; left: 50%; top: 12px; transform: translateX(-50%); z-index: 1000; background: var(--ink); color: #fff; border: 2px solid #fff; border-radius: 999px;
+  padding: 8px 20px; font-weight: 600; cursor: pointer; box-shadow: 0 2px 10px rgba(18, 32, 42, .4); }
+.map-play:hover { background: var(--blue-deep); }
+.map-play[hidden] { display: none; }
+.team-dot { width: 26px; height: 26px; border-radius: 50%; border: 3px solid #fff; color: #fff; font: 600 13px/20px var(--tight); text-align: center;
+  box-shadow: 0 0 0 1.5px rgba(18, 32, 42, .6), 0 2px 8px rgba(18, 32, 42, .45); }
+.playbar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; padding: 8px 20px; background: var(--surface); border-bottom: 1px solid var(--line); }
+.playbar select { width: auto; }
+.playbar .btn.primary { width: auto; min-width: 86px; padding: 6px 14px; }
+.playbar input[type="range"] { flex: 1 1 160px; accent-color: var(--blue); margin: 0; }
+.playbar output { min-width: 168px; text-align: right; color: var(--ink-2); font-variant-numeric: tabular-nums; }
+.kpis { display: flex; flex-wrap: wrap; background: var(--surface); border-bottom: 1px solid var(--line); }
+.kpis div { flex: 1 1 128px; padding: 8px 20px 9px; border-right: 1px solid var(--line); }
+.kpis div:last-child { border-right: 0; }
+.kpis b { display: block; font: 600 22px/1.15 var(--tight); font-variant-numeric: tabular-nums; }
+.kpis span { color: var(--ink-2); font-size: 12.5px; }
+.tick { display: flex; align-items: center; gap: 8px; margin: 0 0 10px; cursor: pointer; }
+.tick input { accent-color: var(--ink); margin: 0; }
+#map.drawing, #map.picking { cursor: crosshair; }
+.status { display: flex; align-items: center; gap: 12px; padding: 7px 20px; background: var(--surface); border-bottom: 1px solid var(--line); min-height: 36px; color: var(--ink-2); }
+.status.warn { background: var(--warn-wash); color: var(--warn); }
+.status progress { width: 160px; accent-color: var(--blue); }
+.status .tag { margin-left: auto; white-space: nowrap; color: var(--ink-2); }
+
+.results { padding: 16px 20px 40px; }
+.results-head { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px; margin-bottom: 12px; }
+.results-head h2 { font: 600 17px/1.25 var(--tight); margin-right: auto; }
+.seg { display: inline-flex; border: 1px solid var(--line-2); border-radius: 5px; overflow: hidden; }
+.seg button { border: 0; background: #fff; padding: 4px 10px; cursor: pointer; }
+.seg button + button { border-left: 1px solid var(--line-2); }
+.seg button[aria-pressed="true"] { background: var(--ink); color: #fff; }
+.charts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 12px 14px 8px; }
+.card h3 { font-size: 14px; font-weight: 600; }
+.card h3 + p { color: var(--ink-2); font-size: 13px; margin-bottom: 4px; }
+.legend { display: flex; flex-wrap: wrap; gap: 2px 14px; font-size: 12.5px; color: var(--ink-2); margin: 4px 0 2px; }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.chart { position: relative; }
+.chart svg { display: block; width: 100%; height: auto; overflow: visible; }
+.chart text { font: 11.5px var(--sans); fill: var(--muted); }
+.chart .axis-title { fill: var(--ink-2); }
+.tip { position: absolute; pointer-events: none; background: var(--ink); color: #fff; font-size: 12px; line-height: 1.4; padding: 6px 8px; border-radius: 4px; white-space: nowrap; z-index: 5; display: none; }
+.tip b { font-weight: 600; }
+.tip i { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; }
+
+table { width: 100%; border-collapse: collapse; margin-top: 16px; background: var(--surface); border: 1px solid var(--line); border-radius: 6px; }
+th, td { padding: 7px 12px; text-align: right; border-bottom: 1px solid var(--line); font-variant-numeric: tabular-nums; }
+th { font-weight: 500; color: var(--ink-2); font-size: 13px; vertical-align: bottom; }
+th:first-child, td:first-child { text-align: left; }
+tbody tr { cursor: pointer; }
+tbody tr:hover { background: #f6f9fb; }
+tbody tr[aria-selected="true"] { background: var(--wash); }
+tbody td:first-child { display: flex; align-items: center; gap: 8px; }
+.caveat { color: var(--ink-2); font-size: 13px; margin-top: 12px; max-width: 78ch; }
+
+.leaflet-container { font: 12.5px var(--sans); }
+.start-pin { width: 22px; height: 22px; }
+.map-key { background: rgba(255, 255, 255, .94); padding: 6px 9px; border-radius: 4px; border: 1px solid var(--line-2); line-height: 1.5; color: var(--ink-2); }
+.map-key i { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin: 0 2px 0 6px; border: 1px solid #fff; box-shadow: 0 0 0 1px #9aa7b0; vertical-align: -1px; }
+
+dialog { border: 0; border-radius: 8px; padding: 0; max-width: 680px; width: calc(100% - 32px); color: var(--ink); box-shadow: 0 12px 48px rgba(18, 32, 42, .35); }
+dialog::backdrop { background: rgba(18, 32, 42, .5); }
+.about { padding: 22px 26px 24px; }
+.about h2 { font: 600 21px/1.25 var(--tight); margin-bottom: 10px; }
+.about h3 { font-size: 14px; font-weight: 600; margin: 14px 0 2px; }
+.about p, .about li { max-width: 70ch; }
+.about ul { padding-left: 18px; }
+.about .formula { font: 500 15px var(--tight); background: var(--page); padding: 8px 12px; border-radius: 4px; margin: 6px 0; }
+.about .close { float: right; }
+
+@media (max-width: 980px) {
+  body { height: auto; }
+  .top { flex-wrap: wrap; }
+  .top p { flex-basis: 100%; order: 3; }
+  .bench { display: block; height: auto; }
+  .rail { border-right: 0; border-bottom: 1px solid var(--line); padding: 6px 16px 20px; }
+  .charts { grid-template-columns: 1fr; }
+  #map { height: 62vh; }
+  .results { padding: 16px; }
+  table { display: block; overflow-x: auto; }
+}
+@media (prefers-reduced-motion: no-preference) { .scale i { transition: width .15s; } }
+</style>
+</head>
+<body>
+<header class="top">
+  <h1><a id="backLink" href="../index.html" style="color:inherit;text-decoration:none">&larr; Lift-ratio in African cities</a> <span style="font-weight:400;opacity:.7">| route simulation</span></h1>
+  <p>Find larval habitats, rank them, plan routes and treat. Lift-ratio measures how much each step adds.</p>
+  <button id="aboutBtn" type="button">How it works</button>
+</header>
+
+<main class="bench">
+  <aside class="rail" aria-label="Workflow steps">
+
+    <section class="step">
+      <span class="stop">1</span>
+      <h2>Find</h2>
+      <p>Where are the candidate habitats?</p>
+      <div class="tabs" role="tablist">
+        <button type="button" role="tab" id="tabDemo" aria-selected="true">Try a demo</button>
+        <button type="button" role="tab" id="tabUpload" aria-selected="false">Use your own list</button>
+      </div>
+      <div id="paneDemo">
+        <label class="field"><span>City</span><select id="city"></select></label>
+        <div class="pair"><input id="placeQuery" type="search" placeholder="Or search for a place" aria-label="Search for a place"><button class="btn" id="placeGo" type="button">Search</button></div>
+        <ul id="placeResults"></ul>
+        <div class="pair"><button class="btn" id="drawBtn" type="button" aria-pressed="false">Draw an area on the map</button></div>
+        <label class="field"><span>Count distribution</span><select id="distPreset"><option value="jigjiga">Jigjiga survey (743 habitats)</option><option value="jigjiga_hot">Jigjiga survey, strong hot spots</option><option value="semera">Semera survey (484 habitats)</option><option value="logiya">Logiya survey (176 habitats)</option><option value="custom">Custom</option></select></label>
+        <label class="field"><span>Habitats to create</span><output id="nOut"></output><input id="nHabitats" type="range" min="50" max="1500" step="1" value="743"></label>
+        <details>
+          <summary>Shape of the synthetic counts</summary>
+          <label class="field"><span>Habitats with no larvae</span><output id="zeroOut"></output><input id="zeroShare" type="range" min="0" max="0.95" step="any" value="0.2"></label>
+          <label class="field"><span>Mean count where larvae occur</span><output id="meanOut"></output><input id="meanCount" type="range" min="10" max="400" step="any" value="150"></label>
+          <label class="field"><span>Evenness of counts (dispersion k)</span><output id="kOut"></output><input id="kShape" type="range" min="0.2" max="3" step="any" value="0.9"></label>
+          <label class="field"><span>Neighborhood differences</span><output id="clusterOut"></output><input id="clustering" type="range" min="0" max="1.2" step="0.1" value="0.5"></label>
+          <label class="field"><span>Random seed</span><input id="seed" type="number" min="1" max="999999" value="2026"></label>
+          <p class="note">The presets are the zero-inflated negative binomial distributions fitted to the three surveys. Change any slider to explore other distributions; the preset then reads "Custom".</p>
+        </details>
+        <button class="btn primary" id="demoGo" type="button">Build the demo</button>
+        <p class="note">Demo habitats are synthetic. They are placed beside real streets, but they are not real habitats.</p>
+      </div>
+      <div id="paneUpload" hidden>
+        <input id="file" type="file" accept=".csv,.txt,text/csv" aria-label="Habitat list (CSV)">
+        <p class="note">A CSV file with <code>lat</code>, <code>lon</code> and <code>score</code> columns, one habitat per row. Add an <code>observed</code> column with field counts to score the ranking itself, and an <code>id</code> column to name habitats.</p>
+        <p class="note">Your file is read in this browser and is not uploaded. Only the outline of the map area is sent to OpenStreetMap, to fetch roads.</p>
+        <div class="pair" style="margin-top:10px"><button class="btn" id="exampleBtn" type="button">Load an example list</button><button class="btn" id="sampleBtn" type="button">Download it</button></div>
+        <p class="note">The example list is synthetic: 300 made-up habitats in Jigjiga.</p>
+      </div>
+      <label class="field" style="margin-top:12px"><span>Travel distances</span><select id="distanceModel"><option value="roads">Along OpenStreetMap roads</option><option value="straight">Straight line × 1.3 (no road data)</option></select></label>
+    </section>
+
+    <section class="step">
+      <span class="stop">2</span>
+      <h2>Rank</h2>
+      <p id="rankLead">How well do the scores order the habitats?</p>
+      <div class="lift"><b id="liftNum">–</b><span id="liftCap">lift-ratio of the ranking</span></div>
+      <div class="scale" aria-hidden="true"><i id="liftBar" style="width:0"></i></div>
+      <div class="scale-ends" aria-hidden="true"><span>0 random order</span><span>ideal order 1</span></div>
+      <div class="legend" id="rankLegend"></div>
+      <div class="chart" id="rankChart"></div>
+      <label class="field" id="skillRow"><span>Lift-ratio of the predictive model</span><output id="skillOut"></output><input id="skill" type="range" min="0" max="0.95" step="0.01" value="0.35"></label>
+      <label class="field"><span>Habitats you can visit</span><output id="budgetOut"></output><input id="budget" type="range" min="1" max="100" step="1" value="50"></label>
+      <p class="note" id="rankText"></p>
+    </section>
+
+    <section class="step">
+      <span class="stop">3</span>
+      <h2>Route</h2>
+      <p>In what order should teams visit them?</p>
+      <label class="field"><span>Teams</span><output id="teamsOut"></output><input id="teams" type="range" min="1" max="6" step="1" value="2"></label>
+      <label class="field"><span>Driving speed</span><output id="speedOut"></output><input id="speed" type="range" min="5" max="60" step="1" value="25"></label>
+      <label class="field"><span>Time at each habitat</span><output id="serviceOut"></output><input id="service" type="range" min="1" max="60" step="1" value="20"></label>
+      <label class="field"><span>Working day</span><output id="hoursOut"></output><input id="hours" type="range" min="4" max="12" step="0.5" value="8"></label>
+      <div class="checks" id="strategyChecks"></div>
+      <details>
+        <summary>Strategy settings</summary>
+        <label class="field"><span>Nearby priority: habitats considered</span><output id="kNearOut"></output><input id="kNear" type="range" min="5" max="160" step="5" value="40"></label>
+        <label class="field"><span>Zigzag sweep: band width</span><output id="bandOut"></output><input id="band" type="range" min="100" max="1000" step="50" value="250"></label>
+      </details>
+      <label class="tick"><input type="checkbox" id="dailyReturn"> Teams return to the start each day</label>
+      <div class="pair"><button class="btn" id="startBtn" type="button" aria-pressed="false">Move the start point</button></div>
+    </section>
+
+    <section class="step">
+      <span class="stop">4</span>
+      <h2>Treat</h2>
+      <p>How soon does the campaign reach its target?</p>
+      <label class="field"><span>Coverage target</span><output id="targetOut"></output><input id="target" type="range" min="10" max="100" step="5" value="50"></label>
+      <p class="summary" id="treatText">Build the demo or load a list to see results.</p>
+      <div class="pair"><button class="btn" id="planBtn" type="button" disabled>Download visit plan</button><button class="btn" id="dataBtn" type="button" disabled>Download habitats</button></div>
+    </section>
+  </aside>
+
+  <section class="stage">
+    <div class="mapwrap"><div id="map" aria-label="Map of habitats and routes"></div><button class="map-play" id="mapPlay" type="button" hidden>▶ Play the campaign</button></div>
+    <div class="playbar" role="group" aria-label="Play the campaign on the map">
+      <select id="mapStrategy" aria-label="Strategy shown on the map"></select>
+      <button class="btn primary" id="playBtn" type="button" aria-pressed="false">Play</button>
+      <select id="playSpeed" aria-label="Playback speed"><option value="0.5">0.5×</option><option value="1" selected>1×</option><option value="2">2×</option><option value="4">4×</option><option value="8">8×</option></select>
+      <input id="day" type="range" min="0" max="1" step="1" value="1" aria-label="Working day shown">
+      <output id="dayOut">no campaign yet</output>
+    </div>
+    <div class="kpis" aria-live="off">
+      <div><b id="kpiCov">–</b><span id="kpiCovLabel">predicted score reached</span></div>
+      <div><b id="kpiSeen">–</b><span>habitats visited</span></div>
+      <div><b id="kpiTarget">–</b><span id="kpiTargetLabel">days to target</span></div>
+      <div><b id="kpiFinish">–</b><span>days to finish</span></div>
+      <div><b id="kpiDrive">–</b><span>km driven in the campaign</span></div>
+    </div>
+    <div class="status" id="status" role="status"><span id="statusText">Choose a city and build the demo, or load your own list.</span><progress id="progress" max="1" value="0" hidden></progress><span class="tag" id="dataTag"></span></div>
+    <div class="results">
+      <div class="results-head">
+        <h2>Route results</h2>
+        <div class="seg" id="measure" role="group" aria-label="Judge routes by">
+          <button type="button" data-measure="score" aria-pressed="true">Judge by predicted score</button>
+          <button type="button" data-measure="observed" aria-pressed="false">Judge by larvae</button>
+        </div>
+      </div>
+      <div class="charts">
+        <figure class="card">
+          <h3>Coverage by habitats visited</h3>
+          <p>The closer a route stays to the ideal curve, the higher its lift-ratio.</p>
+          <div class="legend" id="visitLegend"></div>
+          <div class="chart" id="visitChart"></div>
+        </figure>
+        <figure class="card">
+          <h3>Coverage by working day</h3>
+          <p id="dayCaption">Dots mark the first day at or above the target.</p>
+          <div class="legend" id="dayLegend"></div>
+          <div class="chart" id="dayChart"></div>
+        </figure>
+      </div>
+      <table id="resultTable" aria-label="Results by routing strategy">
+        <thead><tr><th>Strategy</th><th>Route lift-ratio</th><th id="thTarget">Days to target</th><th>Coverage after 10 days</th><th>Days to finish</th><th>Driving (km)</th></tr></thead>
+        <tbody></tbody>
+      </table>
+      <p class="caveat" id="caveat">Routes are simulated. They show what a plan would schedule, not larvae treated or malaria prevented.</p>
+    </div>
+  </section>
+</main>
+
+<dialog id="about">
+  <div class="about">
+    <button class="btn close" id="aboutClose" type="button">Close</button>
+    <h2>How it works</h2>
+    <p>Larval source management often fails on logistics: teams cannot visit every water body, so the order of visits matters. This tool walks through four steps and puts a number on two of them.</p>
+    <h3>1. Find</h3>
+    <p>Start from a list of candidate habitats, each with a location. In the demo, the tool creates synthetic habitats beside real streets of the area you choose.</p>
+    <h3>2. Rank</h3>
+    <p>Each habitat has a score: a prediction of how productive it is. If you also have field counts, lift-ratio tells you how good the ranking is.</p>
+    <p class="formula">lift-ratio = (area under the ranking's curve − 0.5) ÷ (area under the ideal curve − 0.5)</p>
+    <p>The curve shows the share of larvae reached as habitats are taken in score order. Random order gives 0 and the ideal order gives 1. A lift-ratio of 0.35 means the ranking captures 35% of the possible gain over random order. It is not 35% accuracy.</p>
+    <h3>3. Route</h3>
+    <p>Teams drive between habitats along OpenStreetMap roads. Each strategy chooses the next habitat by its own rule. The route lift-ratio compares the visit order with the scores, so it shows how much of the ranking survives once travel is counted.</p>
+    <p>Street search is the baseline with no map at all: a team drives every street of the area and treats the habitats it passes. The gap between it and the other strategies is what the map from the Find step is worth.</p>
+    <h3>4. Treat</h3>
+    <p>The result is the number of working days a campaign needs to reach a coverage target, for each strategy.</p>
+    <h3>What the simulation assumes</h3>
+    <ul>
+      <li>Constant driving speed, and the same time at every habitat.</li>
+      <li>Roads are two-way. A habitat is reached from the nearest road point, in a straight line.</li>
+      <li>Teams start together. By default they do not return to the start at night and their clocks simply run on; you can switch on a daily return.</li>
+      <li>Every visit succeeds. Access problems, breaks and re-treatment are not modeled.</li>
+    </ul>
+    <h3>Your data and outside services</h3>
+    <p>Everything is computed in your browser. A list you load is never uploaded. The page asks outside services for three things: the background map (CARTO streets or Esri satellite imagery), roads inside the map area, and place names you search. No language model or other server is involved.</p>
+    <p class="note">Map data © OpenStreetMap contributors. Background maps © CARTO and Esri. Roads come from the Overpass API and place search from Nominatim.</p>
+  </div>
+</dialog>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="core.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

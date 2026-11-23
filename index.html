@@ -1,0 +1,236 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lift-ratio in African cities</title>
+<meta name="description" content="Synthetic larval habitat surveys on the OpenStreetMap roads of 2,082 African cities: set the model's lift-ratio and how concentrated the larvae are, and see the field time each city would save.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Sans+Condensed:wght@500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<header class="top">
+  <h1>Lift-ratio in African cities</h1>
+  <nav aria-label="Sections">
+    <a href="#findings">Findings</a>
+    <a href="#explore">Explore</a>
+    <a href="#survey">One survey</a>
+    <a href="#methods">Methods</a>
+    <a class="go" href="sim/index.html">Route simulator</a>
+  </nav>
+</header>
+
+<main>
+<section class="hero" id="findings">
+  <div class="wrap">
+    <h2>What a habitat ranking and a route plan are worth, tested on the real roads of 2,082 African cities</h2>
+    <p>We placed synthetic larval habitats along the OpenStreetMap roads of every African city of 50,000 to 1 million people (2,082 cities by the UN definition, 2,870 survey areas in 55 countries and territories) and made 158,840 synthetic surveys. Larval counts follow the distributions fitted to three field surveys in Ethiopia (Jigjiga, Semera and Logiya). Each survey was ranked by a model of known lift-ratio, about 0.35 (0.357 in the runs; a modest, realistic model) or 0 (no information), and worked under three visit plans: priority per minute of travel, strict score order, and nearest neighbor without scores. In the <a href="#explore">explorer</a> you set the model's lift-ratio and how concentrated the larvae are, and every city's field time is predicted from these runs.</p>
+
+    <div class="cards">
+      <div class="card">
+        <div class="big">0.97</div>
+        <h3>of the lift-ratio survives the road network</h3>
+        <p>A route that follows the scores keeps 97% to 98% of the ranking's lift-ratio. Across 158,840 surveys in 2,870 survey areas, route lift-ratio equals route fidelity times ranking lift-ratio (slope 1.00, R² 0.93). A lift-ratio measured on a list tells you what a route will deliver.</p>
+      </div>
+      <div class="card">
+        <div class="big">23%</div>
+        <h3>fewer team hours with a modest model</h3>
+        <p>With lift-ratio about 0.35 the priority route reaches half the larvae in 6.2 team-days instead of 8.1 by nearest neighbor (median survey, Jigjiga distribution): 23% fewer team hours over all surveys. The saving is 34% for the Semera distribution and 32% for Logiya. A model does not need to be strong to pay off.</p>
+      </div>
+      <div class="card">
+        <div class="big">66%</div>
+        <h3>of surveys: strict score order is slower than no model at all</h3>
+        <p>Visiting habitats in score order ignores travel. At lift-ratio about 0.35 it took longer than the nearest-neighbor route in 66% of the Jigjiga-like surveys, while weighing score against driving time (priority per minute) was faster in 98.5%. A model pays only when the route plan uses it well.</p>
+      </div>
+      <div class="card">
+        <div class="big">L × G / 2</div>
+        <h3>the gain is the lift-ratio times the concentration of larvae</h3>
+        <p>The average gain of a ranking over random order is L × G / 2, where G is the Gini coefficient of the counts. Sparse, concentrated larvae (Semera, Logiya) leave more to gain. The gain is largest for partial targets: with the Jigjiga distribution and lift-ratio about 0.35, 31% of team hours saved at a 30% target, 23% at 50%, 9% at 80%.</p>
+      </div>
+      <div class="card">
+        <div class="big">13%</div>
+        <h3>of the variation in hours saved comes from the city</h3>
+        <p>Road layouts differ a lot, yet differences between survey areas explain only 13% of the variation in hours saved between surveys; city totals run from 19% to 28% (5th to 95th percentile, Jigjiga distribution). Longer drives between habitats lower the saving by about 2 points per standard deviation. The lift-ratio and the count distribution set the result, not the city.</p>
+      </div>
+      <div class="card">
+        <div class="big">0.9 / √n</div>
+        <h3>small, sparse surveys cannot measure the lift-ratio well</h3>
+        <p>The standard deviation of a measured lift-ratio is about 0.9 over the square root of the number of habitats with larvae: 0.038 for the Jigjiga distribution (about 590 such habitats), 0.076 for Semera (about 150), 0.15 for Logiya (about 25). A random-order test detects a model of about 0.35 in 100%, 96% and 52% of surveys, with 4.7% false alarms at lift-ratio 0.</p>
+      </div>
+    </div>
+
+    <div class="parts">
+      <div>
+        <h3>The lift-ratio</h3>
+        <p>One unit-free number that carries across steps. It predicts habitats saved (through L × G / 2 and the coverage curves), it predicts route performance (times a fidelity near 0.97), and it predicts its own uncertainty (0.9 / √n). The same number means the same thing in Saint-Louis, Kisumu or Bouaké.</p>
+      </div>
+      <div>
+        <h3>The predictive model</h3>
+        <p>The source of every saving: at lift-ratio 0 no visit plan beats nearest neighbor, while a modest model of about 0.35 already cuts a fifth to a third of team hours. The explorer shows how the gain grows with the lift-ratio; measuring the lift-ratio of a real model honestly tells a program what to expect.</p>
+      </div>
+      <div>
+        <h3>The routing simulation</h3>
+        <p>It turns habitats saved into hours. A priority route drives a little longer per habitat (11.4 against 10.4 minutes, Jigjiga distribution, 50% target), so team hours saved are about 78% of the visits skipped at a 50% target (82% at 30%, 57% at 80%). It also shows that strict score order wastes the model.</p>
+      </div>
+    </div>
+    <p class="bottom-line">The large-scale conclusion: the field time a model can save is set by three numbers, its lift-ratio, the concentration of the larval counts, and the coverage target. Road networks change the answer by only a few points, so a lift-ratio measured in one city transfers to others with similar larval distributions, as long as the visit plan weighs scores against travel time.</p>
+
+    <div class="tablebox">
+      <table class="grid" id="summaryTable">
+        <caption class="note" style="caption-side:bottom;text-align:left;padding:6px 8px">All 2,082 cities pooled; model lift-ratio 0.357 (about 0.35). Team-days are the median team hours to reach half the larvae, divided by 8. Hours saved: total team hours of the priority route against nearest neighbor, over all surveys.</caption>
+        <thead><tr><th>Count distribution</th><th>Team-days, nearest neighbor</th><th>Team-days, strict score order</th><th>Team-days, priority route</th><th>Hours saved</th><th>Route fidelity</th><th>SD of measured lift-ratio</th><th>Test detects the ranking</th></tr></thead>
+        <tbody>
+          <tr><td>Jigjiga</td><td>8.1</td><td>8.4</td><td>6.2</td><td>23%</td><td>0.966</td><td>0.038</td><td>100%</td></tr>
+          <tr><td>Jigjiga, strong hot spots</td><td>8.1</td><td>8.4</td><td>6.2</td><td>23%</td><td>0.966</td><td>0.037</td><td>100%</td></tr>
+          <tr><td>Semera</td><td>5.3</td><td>4.6</td><td>3.5</td><td>34%</td><td>0.980</td><td>0.076</td><td>96%</td></tr>
+          <tr><td>Logiya</td><td>2.0</td><td>1.6</td><td>1.3</td><td>32%</td><td>0.977</td><td>0.151</td><td>52%</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<section class="block" id="explore">
+  <div class="wrap">
+    <h2>Explore: set the model and the larvae, see every city</h2>
+    <p class="lead">Move the sliders: the page makes synthetic surveys with your settings in this browser and predicts each city's field time from the travel measured in the 158,840 synthetic surveys. Each dot is a city, sized by population. Click a city, or search for one, to see its numbers and to run the route simulation on its own roads.</p>
+    <div class="bench">
+      <aside class="rail" id="rail">
+        <h3 class="rail-h">Settings</h3>
+        <div class="field"><span>Start from a surveyed distribution</span>
+          <select id="preset">
+            <option value="jigjiga">Jigjiga survey</option>
+            <option value="semera">Semera survey</option>
+            <option value="logiya">Logiya survey</option>
+            <option value="custom">Custom</option>
+          </select></div>
+        <label class="field"><span>Model performance: lift-ratio</span><output id="LOut"></output><input id="L" type="range" min="0" max="0.6" step="0.01" value="0.35"></label>
+        <label class="field"><span>Site concentration: habitats that can produce larvae</span><output id="siteOut"></output><input id="site" type="range" min="0.05" max="1" step="any" value="0.8"></label>
+        <label class="field"><span>Productivity concentration: dispersion k (small k: a few habitats hold most larvae)</span><output id="kOut"></output><input id="k" type="range" min="0.2" max="3" step="any" value="0.9"></label>
+        <label class="field"><span>Target share of larvae</span><output id="TOut"></output><input id="T" type="range" min="0.3" max="0.8" step="0.05" value="0.5"></label>
+        <details>
+          <summary>Mean count and survey size</summary>
+          <label class="field"><span>Mean count where larvae can occur</span><output id="muOut"></output><input id="mu" type="range" min="10" max="400" step="any" value="150"></label>
+          <label class="field"><span>Habitats in the survey</span><output id="nOut"></output><input id="n" type="range" min="50" max="1500" step="1" value="743"></label>
+        </details>
+        <hr>
+        <div class="field"><span>Color the cities by</span>
+          <select id="metric">
+            <option value="saving">Team hours saved, priority route against nearest neighbor</option>
+            <option value="daysRoute">Team-days to the target, priority route</option>
+            <option value="daysNN">Team-days to the target, nearest neighbor</option>
+            <option value="travel">Extra driving per habitat on a priority route</option>
+          </select></div>
+        <div class="field"><span>Malaria in 2024 (WHO)</span>
+          <select id="status">
+            <option value="all">All cities</option>
+            <option value="cases">Countries with indigenous cases</option>
+            <option value="free">Countries without indigenous cases</option>
+          </select></div>
+        <label class="check"><input type="checkbox" id="stretch"> Stretch the colors to the cities shown</label>
+        <div class="legend" id="legend"></div>
+        <div class="field searchbox"><span>Find a city</span>
+          <input id="citySearch" type="search" placeholder="City or country" autocomplete="off" aria-controls="cityResults"></div>
+        <ul id="cityResults"></ul>
+        <p class="note" id="mapCount"></p>
+        <div id="cityPane" hidden></div>
+      </aside>
+      <div id="map" role="region" aria-label="Map of the cities"></div>
+    </div>
+  </div>
+</section>
+
+<section class="block" id="survey">
+  <div class="wrap">
+    <h2>One survey with these settings</h2>
+    <p class="lead">The same settings, seen in one survey: how many habitats a team must visit to reach the target in the ideal order, in the model's order and in random order, and what that means for field time across the cities.</p>
+    <div class="survey-out">
+      <div class="tiles" id="tTiles"></div>
+      <div class="chart-title">Share of larvae reached as habitats are visited</div>
+      <div class="series-key" id="tKey">
+        <span><svg viewBox="0 0 22 8" aria-hidden="true"><line x1="0" x2="22" y1="4" y2="4" stroke="var(--ideal)" stroke-width="2"/></svg>Ideal order</span>
+        <span><svg viewBox="0 0 22 8" aria-hidden="true"><line x1="0" x2="22" y1="4" y2="4" stroke="var(--blue)" stroke-width="2"/></svg>Model's order</span>
+        <span><svg viewBox="0 0 22 8" aria-hidden="true"><line x1="0" x2="22" y1="4" y2="4" stroke="var(--random)" stroke-width="2" stroke-dasharray="5 4"/></svg>Random order</span>
+      </div>
+      <div class="chart" id="tChart"></div>
+      <p class="note" id="tText"></p>
+      <ol class="formulas">
+        <li>Gini of the counts: <code>G = Σ F(y)(1 − F(y)) / E[Y]</code>, with F the distribution function of the zero-inflated negative binomial. Fewer habitats that can produce, or a smaller k, raise G.</li>
+        <li>Area gain of a ranking over random order: <code>L × G / 2</code>. The ideal order gains <code>G / 2</code>.</li>
+        <li>Model scores: a Gaussian copula with correlation ρ to the normal score of the counts, with ρ set so that the lift-ratio measured in the synthetic surveys averages L.</li>
+        <li>Route lift-ratio: route fidelity × L. SD of a measured lift-ratio: about <code>0.9 / √n</code>, n the habitats with larvae.</li>
+        <li>Team hours saved in a city: <code>1 − (1 − h) × r</code>, with h the visits a priority route skips and r its minutes per habitat over those of nearest neighbor (see Methods).</li>
+      </ol>
+    </div>
+  </div>
+</section>
+
+<section class="block" id="methods">
+  <div class="wrap">
+    <h2>Methods</h2>
+    <div class="methods">
+      <div>
+        <h3>Cities</h3>
+        <p>Cities follow the Degree of Urbanisation, the city definition endorsed by the UN Statistical Commission, as delineated in the GHSL Urban Centre Database (R2024A): contiguous areas of at least 50,000 people at 1,500 or more per km². This site keeps the 2,082 African urban centres (UN M49 regions) of 50,000 to 1 million people. Smaller places and the largest metropolises were also simulated, but one survey of a few hundred habitats models neither well.</p>
+      </div>
+      <div>
+        <h3>Survey areas and roads</h3>
+        <p>Each city holds one or more survey areas, centred on its named places from OpenStreetMap and GeoNames. Roads come from OpenStreetMap through the Geofabrik extracts of 21 November 2026. Travel time between habitats is the fastest path on the road graph, with a speed for each road class.</p>
+      </div>
+      <div>
+        <h3>Habitats and counts</h3>
+        <p>Habitats sit on road points in the survey area. Counts are drawn from the zero-inflated negative binomial fitted to each field survey, with spatial hot spots from a Gaussian random field. About 14 synthetic surveys per survey area and distribution were drawn.</p>
+        <div class="tablebox"><table class="grid">
+          <thead><tr><th>Distribution</th><th>Habitats</th><th>Cannot produce</th><th>Mean count</th><th>Dispersion k</th></tr></thead>
+          <tbody>
+            <tr><td>Jigjiga</td><td>743</td><td>20.3%</td><td>149.7</td><td>0.90</td></tr>
+            <tr><td>Semera</td><td>484</td><td>64.6%</td><td>52.2</td><td>0.40</td></tr>
+            <tr><td>Logiya</td><td>176</td><td>85.3%</td><td>44.1</td><td>0.88</td></tr>
+          </tbody></table></div>
+      </div>
+      <div>
+        <h3>Models and visit plans</h3>
+        <ul>
+          <li>Model scores have a chosen lift-ratio through a Gaussian copula with the counts: 0 and 0.357 in the city runs.</li>
+          <li>Priority per minute: the next habitat maximizes score per minute of driving and service.</li>
+          <li>Strict score order: highest score first, whatever the travel.</li>
+          <li>Nearest neighbor: the closest habitat next, without scores.</li>
+          <li>Team-days: team hours to reach the target, divided by 8. Hours saved: total team hours over all surveys, priority route against nearest neighbor. Averages of the per-survey savings, as in the full report, are 1 to 6 points lower for the sparse distributions.</li>
+        </ul>
+      </div>
+      <div>
+        <h3>How the explorer predicts any setting</h3>
+        <p>Team hours saved in a city are <code>1 − (1 − h) × r</code>. The visits skipped, h, come from synthetic surveys made in the browser at the route's lift-ratio (lift-ratio × route fidelity). The extra driving, r, is <code>1 + a × c × L<sup>0.69</sup> × p<sup>−0.35</sup></code>, with p the share of habitats holding larvae, c a constant for the target, and a the city's travel factor (0.63 to 1.33 between the 5th and 95th percentile of cities). Both were fit on the city runs, which also used a lift-ratio of 0.70 to learn how driving grows with the lift-ratio; below 0.357 route fidelity is held at its 0.357 value.</p>
+        <p>Check: with one distribution left out of the fit, the predicted hours saved per city differ from the simulated ones by 0.3 to 1.4 points on average, with a correlation of 0.99 between cities. The browser surveys reproduce the visits skipped in the city runs within about 2 points.</p>
+      </div>
+      <div>
+        <h3>The route simulator</h3>
+        <p>The <a href="sim/index.html">route simulator</a> runs the same steps for one area at a time: it makes habitats on the stored roads of the city you choose, ranks them with a model of the lift-ratio you set, and plays the field days of several visit plans. Its travel model is simpler than the city runs (one driving speed with a detour factor), so its numbers differ a little from the map.</p>
+      </div>
+      <div>
+        <h3>Data and licenses</h3>
+        <ul>
+          <li>Roads: © OpenStreetMap contributors, Open Database License 1.0, via Geofabrik.</li>
+          <li>Cities: GHSL Urban Centre Database R2024A, European Commission Joint Research Centre, CC BY 4.0.</li>
+          <li>Place names: GeoNames, CC BY 4.0.</li>
+          <li>Malaria status: WHO Global Health Observatory, indigenous cases 2024.</li>
+          <li>Base map: Esri World Light and Dark Gray Canvas (Esri, HERE, Garmin, © OpenStreetMap contributors, and the GIS user community); the route simulator uses CARTO. Map library: Leaflet.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+</main>
+<footer><div class="wrap">Synthetic data only: no field records are shown on this site. The three count distributions are summaries fitted to field surveys.</div></footer>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="data/cities.js"></script>
+<script src="data/surrogate.js"></script>
+<script src="assets/charts.js"></script>
+<script src="assets/theory.js"></script>
+<script src="assets/explore.js"></script>
+</body>
+</html>
